@@ -1,0 +1,39 @@
+{
+  "district": "Natore",
+  "division": "Rajshahi",
+  "country": "Bangladesh",
+  "coordinates": { "lat": 24.4103, "lng": 88.9985 },
+  "upazilas": [
+    { "name": "Natore Sadar",  "lat": 24.4103, "lng": 88.9985, "population": 285000, "risk": "HIGH" },
+    { "name": "Baraigram",     "lat": 24.5108, "lng": 89.0480, "population": 210000, "risk": "HIGH" },
+    { "name": "Gurudaspur",    "lat": 24.3578, "lng": 89.0344, "population": 175000, "risk": "MEDIUM" },
+    { "name": "Lalpur",        "lat": 24.2874, "lng": 88.9430, "population": 198000, "risk": "HIGH" },
+    { "name": "Singra",        "lat": 24.5501, "lng": 88.9102, "population": 220000, "risk": "MEDIUM" },
+    { "name": "Atrai",         "lat": 24.6480, "lng": 89.0347, "population": 160000, "risk": "LOW" },
+    { "name": "Naldanga",      "lat": 24.3990, "lng": 89.0789, "population": 145000, "risk": "LOW" }
+  ],
+  "registered_numbers": 8240,
+  "active_volunteers": 12,
+  "monthly_rainfall_mm": [12, 25, 58, 95, 182, 248, 310, 285, 195, 88, 35, 18],
+  "monthly_ndvi":        [0.38, 0.42, 0.55, 0.68, 0.72, 0.70, 0.65, 0.62, 0.60, 0.58, 0.50, 0.40],
+  "current_alerts": {
+    "flood":     "HIGH",
+    "drought":   "MEDIUM",
+    "rain":      "MEDIUM",
+    "lightning": "HIGH",
+    "earthquake":"LOW"
+  },
+  "sms_stats": {
+    "total": 1247,
+    "delivered": 1198,
+    "failed": 49,
+    "reach_rate_pct": 96.1
+  },
+  "alert_messages": {
+    "flood":     { "bn": "সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS", "en": "WARNING: Flood risk in Natore. Move to safe location immediately. —LMEWS" },
+    "drought":   { "bn": "সতর্কতা: খরার লক্ষণ দেখা যাচ্ছে। পানি সংরক্ষণ করুন। —LMEWS",       "en": "ADVISORY: Drought conditions. Conserve water. —LMEWS" },
+    "rain":      { "bn": "সতর্কতা: ভারী বৃষ্টির সম্ভাবনা। সাবধান থাকুন। —LMEWS",              "en": "WARNING: Heavy rainfall expected. Stay safe. —LMEWS" },
+    "lightning": { "bn": "সতর্কতা: বজ্রপাতের ঝুঁকি! খোলা মাঠে যাবেন না। ঘরে থাকুন। —LMEWS",  "en": "WARNING: Lightning risk! Stay indoors. —LMEWS" },
+    "earthquake":{ "bn": "সতর্কতা: ভূমিকম্পের আশঙ্কা। খোলা জায়গায় আশ্রয় নিন। —LMEWS",      "en": "WARNING: Earthquake alert. Move to open areas. —LMEWS" }
+  }
+}

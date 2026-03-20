@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Last-Mile Early Warning System — Natore District, Bangladesh</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet" />
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        syne: ['Syne', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
+        bengali: ['Noto Sans Bengali', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          50:  '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+        },
+        danger: { light: '#fca5a5', DEFAULT: '#ef4444', dark: '#b91c1c' },
+        warn:   { light: '#fde68a', DEFAULT: '#f59e0b', dark: '#b45309' },
+        safe:   { light: '#bbf7d0', DEFAULT: '#22c55e', dark: '#15803d' },
+        ink: {
+          900: '#0a0f0d',
+          800: '#111715',
+          700: '#1a2420',
+          600: '#243028',
+          500: '#2e3d35',
+          400: '#3d5248',
+          300: '#4f6b5e',
+          200: '#7a9c8c',
+          100: '#b0ccc0',
+          50:  '#e8f3ef',
+        }
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
+        'blink': 'blink 1s step-end infinite',
+        'slide-in': 'slideIn 0.4s ease-out',
+        'fade-up': 'fadeUp 0.5s ease-out',
+      },
+      keyframes: {
+        blink: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } },
+        slideIn: { from: { transform: 'translateX(-20px)', opacity: 0 }, to: { transform: 'translateX(0)', opacity: 1 } },
+        fadeUp: { from: { transform: 'translateY(16px)', opacity: 0 }, to: { transform: 'translateY(0)', opacity: 1 } },
+      }
+    }
+  }
+}
+</script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Syne', sans-serif; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #111715; }
+  ::-webkit-scrollbar-thumb { background: #3d5248; border-radius: 2px; }
+
+  /* Map */
+  #map { height: 100%; width: 100%; border-radius: 0; }
+  .leaflet-container { background: #0a0f0d; font-family: 'Syne', sans-serif; }
+
+  /* Alert blink */
+  .alert-blink { animation: alertBlink 0.8s ease-in-out infinite alternate; }
+  @keyframes alertBlink {
+    from { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    to   { box-shadow: 0 0 0 8px rgba(239,68,68,0.35); }
+  }
+  .warn-blink { animation: warnBlink 1.2s ease-in-out infinite alternate; }
+  @keyframes warnBlink {
+    from { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+    to   { box-shadow: 0 0 0 8px rgba(245,158,11,0.35); }
+  }
+
+  /* Glass panels */
+  .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .glass-dark { background: rgba(10,15,13,0.85); border: 1px solid rgba(61,82,72,0.4); }
+  .glass-light { background: rgba(255,255,255,0.82); border: 1px solid rgba(176,204,192,0.5); }
+
+  /* Nav active */
+  .nav-item.active { background: rgba(34,197,94,0.12); color: #22c55e; border-left: 3px solid #22c55e; }
+  .nav-item { border-left: 3px solid transparent; }
+
+  /* Section hide */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Community mode */
+  .community-card { transition: transform 0.2s, box-shadow 0.2s; }
+  .community-card:hover { transform: scale(1.04); }
+
+  /* SMS log */
+  .sms-entry { animation: fadeUp 0.4s ease-out; }
+
+  /* Chart canvas fix */
+  canvas { display: block; }
+
+  /* Leaflet popup */
+  .leaflet-popup-content-wrapper { background: #111715; color: #e8f3ef; border: 1px solid #3d5248; border-radius: 8px; }
+  .leaflet-popup-tip { background: #111715; }
+
+  /* Toggle switch */
+  .toggle-track { transition: background 0.2s; }
+  .toggle-thumb { transition: transform 0.2s; }
+
+  /* Risk badge */
+  .risk-low    { background: #166534; color: #bbf7d0; }
+  .risk-medium { background: #92400e; color: #fde68a; }
+  .risk-high   { background: #991b1b; color: #fca5a5; }
+
+  .dark body { background: #0a0f0d; color: #e8f3ef; }
+  .light body, :not(.dark) body { background: #f0fdf4; color: #0a0f0d; }
+</style>
+</head>
+<body class="bg-ink-900 text-ink-50 min-h-screen">
+
+<!-- ═══════════════════════════════════════════════════════ TOP NAV ══ -->
+<header id="topbar" class="fixed top-0 left-0 right-0 z-50 glass glass-dark flex items-center justify-between px-4 h-14 border-b border-ink-600">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
+      <i data-lucide="shield-alert" class="w-4 h-4 text-white"></i>
+    </div>
+    <div>
+      <div class="font-syne font-800 text-sm leading-tight text-ink-50">LMEWS</div>
+      <div class="font-mono text-[10px] text-ink-200 leading-tight">নাটোর জেলা · Natore District</div>
+    </div>
+  </div>
+
+  <!-- System status -->
+  <div class="hidden md:flex items-center gap-4">
+    <div class="flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-safe animate-pulse-slow"></span>
+      <span class="font-mono text-xs text-ink-100">SYSTEM ONLINE</span>
+    </div>
+    <div id="clock" class="font-mono text-xs text-ink-200"></div>
+    <div class="flex items-center gap-1 font-mono text-xs text-ink-200">
+      <i data-lucide="wifi" class="w-3 h-3"></i> LIVE
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="flex items-center gap-3">
+    <!-- Dark/Light toggle -->
+    <button onclick="toggleTheme()" id="themeBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-500 hover:border-brand-500 transition-colors font-mono text-xs text-ink-100 hover:text-brand-400">
+      <i data-lucide="moon" class="w-3 h-3"></i> <span id="themeLabel">Dark</span>
+    </button>
+    <!-- Community mode -->
+    <button onclick="toggleCommunityMode()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-700 hover:bg-brand-600 transition-colors font-mono text-xs text-white">
+      <i data-lucide="users" class="w-3 h-3"></i> Community
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════ MAIN LAYOUT ══ -->
+<div class="flex min-h-screen pt-14">
+
+  <!-- ──────────────────────── LEFT SIDEBAR ──────────────────────── -->
+  <aside id="sidebar" class="w-56 shrink-0 fixed top-14 left-0 bottom-0 glass glass-dark border-r border-ink-600 overflow-y-auto z-40 flex flex-col">
+    <!-- Nav -->
+    <nav class="p-3 flex-1">
+      <div class="text-[10px] font-mono text-ink-300 uppercase tracking-widest px-2 mb-2 mt-1">Navigation</div>
+
+      <div class="space-y-0.5">
+        <button onclick="showSection('map-section')" data-nav="map-section" class="nav-item active w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="map" class="w-4 h-4"></i> Live Map
+        </button>
+        <button onclick="showSection('alerts-section')" data-nav="alerts-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="bell" class="w-4 h-4"></i> Alerts
+        </button>
+        <button onclick="showSection('sms-section')" data-nav="sms-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="message-square" class="w-4 h-4"></i> SMS System
+        </button>
+        <button onclick="showSection('analytics-section')" data-nav="analytics-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Analytics
+        </button>
+        <button onclick="showSection('coordination-section')" data-nav="coordination-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="network" class="w-4 h-4"></i> Coordination
+        </button>
+        <button onclick="showSection('lastmile-section')" data-nav="lastmile-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="radio" class="w-4 h-4"></i> Last-Mile
+        </button>
+        <button onclick="showSection('offline-section')" data-nav="offline-section" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-syne font-600 transition-all hover:bg-ink-700">
+          <i data-lucide="wifi-off" class="w-4 h-4"></i> Offline Mode
+        </button>
+      </div>
+
+      <!-- Map layer toggles (shown when map active) -->
+      <div id="layer-panel" class="mt-5">
+        <div class="text-[10px] font-mono text-ink-300 uppercase tracking-widest px-2 mb-2">Map Layers</div>
+        <div class="space-y-1">
+          <label class="layer-toggle flex items-center justify-between px-3 py-2 rounded-lg hover:bg-ink-700 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-green-500"></span>
+              <span class="text-xs font-syne">NDVI</span>
+            </div>
+            <input type="checkbox" id="layer-ndvi" onchange="toggleLayer('ndvi',this.checked)" checked class="sr-only" />
+            <div class="toggle-track w-9 h-5 rounded-full bg-brand-600 relative cursor-pointer" onclick="this.previousElementSibling.click()">
+              <div class="toggle-thumb absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white translate-x-4"></div>
+            </div>
+          </label>
+          <label class="layer-toggle flex items-center justify-between px-3 py-2 rounded-lg hover:bg-ink-700 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-blue-400"></span>
+              <span class="text-xs font-syne">NDWI</span>
+            </div>
+            <input type="checkbox" id="layer-ndwi" onchange="toggleLayer('ndwi',this.checked)" class="sr-only" />
+            <div class="toggle-track w-9 h-5 rounded-full bg-ink-500 relative cursor-pointer" onclick="this.previousElementSibling.click()">
+              <div class="toggle-thumb absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white"></div>
+            </div>
+          </label>
+          <label class="layer-toggle flex items-center justify-between px-3 py-2 rounded-lg hover:bg-ink-700 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-yellow-400"></span>
+              <span class="text-xs font-syne">LULC</span>
+            </div>
+            <input type="checkbox" id="layer-lulc" onchange="toggleLayer('lulc',this.checked)" class="sr-only" />
+            <div class="toggle-track w-9 h-5 rounded-full bg-ink-500 relative cursor-pointer" onclick="this.previousElementSibling.click()">
+              <div class="toggle-thumb absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white"></div>
+            </div>
+          </label>
+          <label class="layer-toggle flex items-center justify-between px-3 py-2 rounded-lg hover:bg-ink-700 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-sm bg-orange-400"></span>
+              <span class="text-xs font-syne">Soil Moisture</span>
+            </div>
+            <input type="checkbox" id="layer-soil" onchange="toggleLayer('soil',this.checked)" class="sr-only" />
+            <div class="toggle-track w-9 h-5 rounded-full bg-ink-500 relative cursor-pointer" onclick="this.previousElementSibling.click()">
+              <div class="toggle-thumb absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Simulate buttons -->
+    <div class="p-3 border-t border-ink-600">
+      <div class="text-[10px] font-mono text-ink-300 uppercase tracking-widest mb-2">Simulate Alert</div>
+      <button onclick="simulateAlert('flood')" class="alert-blink w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-danger text-white text-xs font-syne font-700 mb-1.5 hover:bg-danger-dark transition-colors">
+        <i data-lucide="waves" class="w-3.5 h-3.5"></i> Flood Alert
+      </button>
+      <button onclick="simulateAlert('lightning')" class="warn-blink w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-warn text-white text-xs font-syne font-700 hover:bg-warn-dark transition-colors">
+        <i data-lucide="zap" class="w-3.5 h-3.5"></i> Lightning Alert
+      </button>
+    </div>
+  </aside>
+
+  <!-- ────────────────────── MAIN CONTENT ──────────────────────── -->
+  <main class="ml-56 flex-1 flex flex-col min-h-[calc(100vh-56px)]">
+
+    <!-- ████ MAP SECTION ████ -->
+    <section id="map-section" class="section active h-[calc(100vh-56px)] relative flex flex-col">
+
+      <!-- Map info bar -->
+      <div class="flex items-center gap-4 px-4 py-2 bg-ink-800 border-b border-ink-600 shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span class="font-mono text-xs text-ink-100">24.4103°N, 88.9985°E · Natore, Rajshahi</span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <span class="font-mono text-xs text-ink-300">Active layer:</span>
+          <span id="active-layer-name" class="font-mono text-xs text-brand-400">NDVI</span>
+        </div>
+        <div id="layer-desc" class="hidden md:block font-mono text-xs text-ink-300 max-w-xs truncate">Vegetation density index — high values (green) indicate healthy crop coverage</div>
+      </div>
+
+      <!-- Map container -->
+      <div id="map" class="flex-1"></div>
+
+      <!-- Layer info card overlay -->
+      <div id="layer-info" class="absolute bottom-4 right-4 z-[500] glass glass-dark p-4 rounded-xl w-64 text-xs font-mono">
+        <div class="text-brand-400 font-700 mb-1.5" id="li-title">NDVI — Vegetation Index</div>
+        <div class="text-ink-100 leading-relaxed" id="li-desc">Normalized Difference Vegetation Index measures live green vegetation. Values range from -1 to +1. Higher values (shown in green) indicate dense, healthy vegetation cover.</div>
+        <div class="mt-2 flex items-center gap-1">
+          <div class="flex-1 h-2 rounded bg-gradient-to-r from-red-600 via-yellow-400 to-green-500"></div>
+          <span class="text-ink-300 ml-1">Low→High</span>
+        </div>
+      </div>
+
+      <!-- Alert overlay (hidden by default) -->
+      <div id="alert-overlay" class="hidden absolute inset-0 z-[600] flex items-center justify-center pointer-events-none">
+        <div class="alert-blink pointer-events-auto bg-danger rounded-2xl px-8 py-6 text-center max-w-sm mx-4 animate-fade-up">
+          <div class="text-4xl mb-2" id="alert-icon-big">🌊</div>
+          <div class="font-syne font-800 text-xl text-white mb-1" id="alert-title-big">Flood Alert</div>
+          <div class="font-bengali text-lg text-red-100 mb-3" id="alert-bangla-big">বন্যার সতর্কতা!</div>
+          <div class="font-mono text-xs text-red-200" id="alert-sub-big">High risk detected in Natore Sadar</div>
+          <button onclick="dismissAlert()" class="mt-4 px-5 py-2 rounded-lg bg-white text-danger font-syne font-700 text-sm pointer-events-auto">
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ ALERTS SECTION ████ -->
+    <section id="alerts-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-5xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">Early Warning Alerts</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">Real-time hazard monitoring for Natore District — 7 Upazilas covered</p>
+        </div>
+
+        <!-- Alert cards grid -->
+        <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8" id="alert-cards">
+          <!-- Flood -->
+          <div id="card-flood" class="rounded-xl border border-danger/40 bg-danger/10 p-4 transition-all" data-risk="high">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-danger/20 flex items-center justify-center text-xl">🌊</div>
+                <div>
+                  <div class="font-syne font-700 text-sm">Flood Risk</div>
+                  <div class="font-bengali text-xs text-ink-200">বন্যার ঝুঁকি</div>
+                </div>
+              </div>
+              <span class="risk-high px-2 py-0.5 rounded text-[10px] font-mono font-700">HIGH</span>
+            </div>
+            <div class="font-bengali text-sm text-ink-100 leading-relaxed mb-3">⚠️ সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান।</div>
+            <div class="text-xs font-mono text-ink-300 mb-2">Affected Upazilas: Natore Sadar, Baraigram</div>
+            <div class="space-y-1 text-xs font-mono">
+              <div class="text-brand-400">→ Move to elevated shelter immediately</div>
+              <div class="text-brand-400">→ Avoid low-lying roads and rivers</div>
+              <div class="text-brand-400">→ Contact local volunteer: 01700-123456</div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-ink-600 flex items-center justify-between">
+              <span class="font-mono text-[10px] text-ink-300">Updated: 2 min ago</span>
+              <button onclick="simulateAlert('flood')" class="font-mono text-[10px] text-danger hover:text-danger-light transition-colors">Simulate →</button>
+            </div>
+          </div>
+
+          <!-- Drought -->
+          <div id="card-drought" class="rounded-xl border border-warn/40 bg-warn/10 p-4 transition-all" data-risk="medium">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-warn/20 flex items-center justify-center text-xl">☀️</div>
+                <div>
+                  <div class="font-syne font-700 text-sm">Drought Risk</div>
+                  <div class="font-bengali text-xs text-ink-200">খরার ঝুঁকি</div>
+                </div>
+              </div>
+              <span class="risk-medium px-2 py-0.5 rounded text-[10px] font-mono font-700">MEDIUM</span>
+            </div>
+            <div class="font-bengali text-sm text-ink-100 leading-relaxed mb-3">⚠️ সতর্কতা: খরার লক্ষণ দেখা যাচ্ছে। পানি সংরক্ষণ করুন।</div>
+            <div class="text-xs font-mono text-ink-300 mb-2">Soil Moisture: 18% (below threshold)</div>
+            <div class="space-y-1 text-xs font-mono">
+              <div class="text-warn">→ Conserve water resources</div>
+              <div class="text-warn">→ Delay non-essential irrigation</div>
+              <div class="text-warn">→ Monitor NDWI daily</div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-ink-600 flex items-center justify-between">
+              <span class="font-mono text-[10px] text-ink-300">Updated: 15 min ago</span>
+              <span class="font-mono text-[10px] text-warn">WATCH</span>
+            </div>
+          </div>
+
+          <!-- Heavy Rainfall -->
+          <div id="card-rain" class="rounded-xl border border-blue-500/40 bg-blue-500/10 p-4 transition-all" data-risk="medium">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-xl">🌧️</div>
+                <div>
+                  <div class="font-syne font-700 text-sm">Heavy Rainfall</div>
+                  <div class="font-bengali text-xs text-ink-200">ভারী বৃষ্টিপাত</div>
+                </div>
+              </div>
+              <span class="risk-medium px-2 py-0.5 rounded text-[10px] font-mono font-700">MEDIUM</span>
+            </div>
+            <div class="font-bengali text-sm text-ink-100 leading-relaxed mb-3">⚠️ আগামী ৬ ঘণ্টায় ভারী বৃষ্টির সম্ভাবনা। সাবধান থাকুন।</div>
+            <div class="text-xs font-mono text-ink-300 mb-2">Forecast: 85mm/hr · Duration: 4-6 hrs</div>
+            <div class="space-y-1 text-xs font-mono">
+              <div class="text-blue-400">→ Stay indoors if possible</div>
+              <div class="text-blue-400">→ Clear drainage channels</div>
+              <div class="text-blue-400">→ Keep emergency kit ready</div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-ink-600 flex items-center justify-between">
+              <span class="font-mono text-[10px] text-ink-300">Updated: 5 min ago</span>
+              <span class="font-mono text-[10px] text-blue-400">ADVISORY</span>
+            </div>
+          </div>
+
+          <!-- Lightning -->
+          <div id="card-lightning" class="rounded-xl border border-yellow-400/40 bg-yellow-400/10 p-4 transition-all" data-risk="high">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-yellow-400/20 flex items-center justify-center text-xl">⚡</div>
+                <div>
+                  <div class="font-syne font-700 text-sm">Lightning Risk</div>
+                  <div class="font-bengali text-xs text-ink-200">বজ্রপাতের ঝুঁকি</div>
+                </div>
+              </div>
+              <span class="risk-high px-2 py-0.5 rounded text-[10px] font-mono font-700">HIGH</span>
+            </div>
+            <div class="font-bengali text-sm text-ink-100 leading-relaxed mb-3">⚠️ বজ্রপাতের সতর্কতা! খোলা মাঠে যাবেন না।</div>
+            <div class="text-xs font-mono text-ink-300 mb-2">Thunderstorm cells detected NW of district</div>
+            <div class="space-y-1 text-xs font-mono">
+              <div class="text-yellow-400">→ Avoid open fields and trees</div>
+              <div class="text-yellow-400">→ Go inside concrete buildings</div>
+              <div class="text-yellow-400">→ Unplug electrical appliances</div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-ink-600 flex items-center justify-between">
+              <span class="font-mono text-[10px] text-ink-300">Updated: 1 min ago</span>
+              <button onclick="simulateAlert('lightning')" class="font-mono text-[10px] text-yellow-400 hover:text-yellow-300 transition-colors">Simulate →</button>
+            </div>
+          </div>
+
+          <!-- Earthquake -->
+          <div id="card-quake" class="rounded-xl border border-orange-500/40 bg-orange-500/10 p-4 transition-all" data-risk="low">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center text-xl">🏔️</div>
+                <div>
+                  <div class="font-syne font-700 text-sm">Earthquake</div>
+                  <div class="font-bengali text-xs text-ink-200">ভূমিকম্পের ঝুঁকি</div>
+                </div>
+              </div>
+              <span class="risk-low px-2 py-0.5 rounded text-[10px] font-mono font-700">LOW</span>
+            </div>
+            <div class="font-bengali text-sm text-ink-100 leading-relaxed mb-3">✅ এখন ভূমিকম্পের কোনো সতর্কতা নেই।</div>
+            <div class="text-xs font-mono text-ink-300 mb-2">Last event: M2.1, 34 days ago</div>
+            <div class="space-y-1 text-xs font-mono">
+              <div class="text-brand-400">→ No action required</div>
+              <div class="text-brand-400">→ Review emergency plans</div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-ink-600 flex items-center justify-between">
+              <span class="font-mono text-[10px] text-ink-300">Updated: 1 hr ago</span>
+              <span class="font-mono text-[10px] text-brand-400">ALL CLEAR</span>
+            </div>
+          </div>
+
+          <!-- System status card -->
+          <div class="rounded-xl border border-ink-500 bg-ink-800 p-4">
+            <div class="font-syne font-700 text-sm mb-3 text-ink-50">System Status</div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-ink-300">Data Feed</span>
+                <span class="text-safe flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-safe animate-pulse"></span>LIVE</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-ink-300">SMS Gateway</span>
+                <span class="text-safe flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-safe animate-pulse"></span>READY</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-ink-300">Volunteers</span>
+                <span class="text-warn">12 / 18 Active</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-ink-300">Coverage</span>
+                <span class="text-brand-400">7 Upazilas</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-ink-300">Last Sync</span>
+                <span class="text-ink-200">2 min ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert history -->
+        <div class="rounded-xl border border-ink-600 bg-ink-800 p-4">
+          <div class="font-syne font-700 text-sm mb-3">Recent Alert History</div>
+          <div class="space-y-2 font-mono text-xs">
+            <div class="flex items-center gap-3 py-2 border-b border-ink-600">
+              <span class="text-ink-300 w-28 shrink-0">2025-06-12 08:32</span>
+              <span class="risk-high px-1.5 py-0.5 rounded text-[10px]">HIGH</span>
+              <span class="text-ink-100 flex-1">Flood alert issued — Baraigram upazila</span>
+              <span class="text-brand-400">142 SMS sent</span>
+            </div>
+            <div class="flex items-center gap-3 py-2 border-b border-ink-600">
+              <span class="text-ink-300 w-28 shrink-0">2025-06-11 14:15</span>
+              <span class="risk-medium px-1.5 py-0.5 rounded text-[10px]">MEDIUM</span>
+              <span class="text-ink-100 flex-1">Heavy rainfall advisory — Natore Sadar</span>
+              <span class="text-brand-400">89 SMS sent</span>
+            </div>
+            <div class="flex items-center gap-3 py-2 border-b border-ink-600">
+              <span class="text-ink-300 w-28 shrink-0">2025-06-10 06:45</span>
+              <span class="risk-high px-1.5 py-0.5 rounded text-[10px]">HIGH</span>
+              <span class="text-ink-100 flex-1">Lightning warning — Lalpur upazila</span>
+              <span class="text-brand-400">205 SMS sent</span>
+            </div>
+            <div class="flex items-center gap-3 py-2">
+              <span class="text-ink-300 w-28 shrink-0">2025-06-08 11:00</span>
+              <span class="risk-low px-1.5 py-0.5 rounded text-[10px]">LOW</span>
+              <span class="text-ink-100 flex-1">Drought watch lifted — Singra upazila</span>
+              <span class="text-brand-400">68 SMS sent</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ SMS SECTION ████ -->
+    <section id="sms-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-4xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">SMS Alert System</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">Simulated SMS gateway — send_sms() ready for Twilio integration</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <!-- Compose SMS -->
+          <div class="rounded-xl border border-ink-600 bg-ink-800 p-5">
+            <div class="font-syne font-700 text-sm mb-4">Compose Alert SMS</div>
+
+            <div class="mb-3">
+              <label class="block font-mono text-xs text-ink-300 mb-1">Alert Type</label>
+              <select id="sms-type" class="w-full bg-ink-700 border border-ink-500 rounded-lg px-3 py-2 text-xs font-mono text-ink-100 focus:outline-none focus:border-brand-500" onchange="updateSmsPreview()">
+                <option value="flood">🌊 Flood Alert</option>
+                <option value="drought">☀️ Drought Warning</option>
+                <option value="rain">🌧️ Heavy Rainfall</option>
+                <option value="lightning">⚡ Lightning Alert</option>
+                <option value="earthquake">🏔️ Earthquake</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="block font-mono text-xs text-ink-300 mb-1">Target Area</label>
+              <select id="sms-area" class="w-full bg-ink-700 border border-ink-500 rounded-lg px-3 py-2 text-xs font-mono text-ink-100 focus:outline-none focus:border-brand-500">
+                <option>All Natore District</option>
+                <option>Natore Sadar</option>
+                <option>Baraigram</option>
+                <option>Gurudaspur</option>
+                <option>Lalpur</option>
+                <option>Singra</option>
+                <option>Atrai</option>
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label class="block font-mono text-xs text-ink-300 mb-1">Message Preview</label>
+              <div id="sms-preview" class="bg-ink-900 border border-ink-500 rounded-lg px-3 py-3 text-sm font-bengali text-ink-100 leading-relaxed min-h-[80px]">
+                সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS
+              </div>
+              <div class="flex justify-between mt-1">
+                <span class="font-mono text-[10px] text-ink-300">~160 chars (1 SMS unit)</span>
+                <span class="font-mono text-[10px] text-brand-400">Bangla encoded</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="sendSMS()" class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-syne font-700 text-sm transition-colors">
+                <i data-lucide="send" class="w-4 h-4"></i> Send SMS
+              </button>
+              <button onclick="sendSMS(true)" class="px-4 py-2.5 rounded-lg border border-ink-500 hover:border-brand-500 text-ink-100 font-syne text-sm transition-colors">
+                <i data-lucide="test-tube" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="space-y-3">
+            <div class="rounded-xl border border-ink-600 bg-ink-800 p-4 grid grid-cols-2 gap-4">
+              <div class="text-center">
+                <div class="font-syne font-800 text-3xl text-brand-400" id="sms-total">1,247</div>
+                <div class="font-mono text-xs text-ink-300">Total Sent</div>
+              </div>
+              <div class="text-center">
+                <div class="font-syne font-800 text-3xl text-safe" id="sms-delivered">1,198</div>
+                <div class="font-mono text-xs text-ink-300">Delivered</div>
+              </div>
+              <div class="text-center">
+                <div class="font-syne font-800 text-3xl text-danger" id="sms-failed">49</div>
+                <div class="font-mono text-xs text-ink-300">Failed</div>
+              </div>
+              <div class="text-center">
+                <div class="font-syne font-800 text-3xl text-warn" id="sms-coverage">96.1%</div>
+                <div class="font-mono text-xs text-ink-300">Reach Rate</div>
+              </div>
+            </div>
+
+            <!-- Backend code snippet -->
+            <div class="rounded-xl border border-ink-600 bg-ink-900 p-4 font-mono text-xs overflow-x-auto">
+              <div class="text-ink-300 mb-2"># backend/sms.py — send_sms() function</div>
+              <div class="text-green-400">def</div><div class="text-blue-300 inline"> send_sms</div><div class="text-ink-100 inline">(to, message, simulate=False):</div>
+              <br/><div class="text-ink-300 pl-4">if simulate or not TWILIO_CONFIGURED:</div>
+              <br/><div class="text-yellow-300 pl-8">log_simulated(to, message)</div>
+              <br/><div class="text-ink-300 pl-4">else:</div>
+              <br/><div class="text-yellow-300 pl-8">client.messages.create(...)</div>
+              <br/><div class="text-ink-300 pl-4">return</div><div class="text-green-300 inline"> {"status":"sent"}</div>
+            </div>
+
+            <!-- Gateway status -->
+            <div class="rounded-xl border border-ink-600 bg-ink-800 p-4 flex items-center justify-between">
+              <div>
+                <div class="font-syne font-700 text-sm">SMS Gateway</div>
+                <div class="font-mono text-xs text-ink-300 mt-0.5">Mode: Simulation (Twilio ready)</div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-warn animate-pulse"></span>
+                <span class="font-mono text-xs text-warn">SIMULATED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SMS Log -->
+        <div class="rounded-xl border border-ink-600 bg-ink-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-syne font-700 text-sm">SMS Log</div>
+            <button onclick="clearSMSLog()" class="font-mono text-xs text-ink-300 hover:text-ink-100 transition-colors">Clear log</button>
+          </div>
+          <div id="sms-log" class="space-y-2 max-h-72 overflow-y-auto font-mono text-xs">
+            <div class="sms-entry flex items-start gap-3 py-2 border-b border-ink-700">
+              <span class="text-brand-400 shrink-0">✓ SENT</span>
+              <span class="text-ink-300 shrink-0">08:32:14</span>
+              <span class="text-ink-100">01711-234567 — সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS</span>
+            </div>
+            <div class="sms-entry flex items-start gap-3 py-2 border-b border-ink-700">
+              <span class="text-brand-400 shrink-0">✓ SENT</span>
+              <span class="text-ink-300 shrink-0">08:32:14</span>
+              <span class="text-ink-100">01812-345678 — সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS</span>
+            </div>
+            <div class="sms-entry flex items-start gap-3 py-2 border-b border-ink-700">
+              <span class="text-danger shrink-0">✗ FAIL</span>
+              <span class="text-ink-300 shrink-0">08:32:15</span>
+              <span class="text-ink-300">01913-456789 — Network unreachable</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ ANALYTICS SECTION ████ -->
+    <section id="analytics-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-5xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">Analytics Dashboard</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">Environmental indicators — Natore District · Last 12 months</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-mono text-xs text-ink-300 mb-1">Avg Rainfall</div>
+            <div class="font-syne font-800 text-2xl text-blue-400">182 <span class="text-sm font-400">mm</span></div>
+            <div class="font-mono text-[10px] text-brand-400 mt-1">↑ 12% vs last yr</div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-mono text-xs text-ink-300 mb-1">NDVI Mean</div>
+            <div class="font-syne font-800 text-2xl text-green-400">0.62</div>
+            <div class="font-mono text-[10px] text-danger mt-1">↓ 4% drought stress</div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-mono text-xs text-ink-300 mb-1">Flood Events</div>
+            <div class="font-syne font-800 text-2xl text-danger">8</div>
+            <div class="font-mono text-[10px] text-warn mt-1">↑ 3 vs last yr</div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-mono text-xs text-ink-300 mb-1">SMS Alerts</div>
+            <div class="font-syne font-800 text-2xl text-brand-400">1,247</div>
+            <div class="font-mono text-[10px] text-brand-400 mt-1">96.1% delivered</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-syne font-700 text-sm mb-4">Monthly Rainfall (mm)</div>
+            <canvas id="rainfallChart" height="200"></canvas>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-syne font-700 text-sm mb-4">NDVI Trend (Vegetation Health)</div>
+            <canvas id="ndviChart" height="200"></canvas>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-syne font-700 text-sm mb-4">Risk Level Distribution</div>
+            <canvas id="riskChart" height="200"></canvas>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="font-syne font-700 text-sm mb-4">SMS Delivery Performance</div>
+            <canvas id="smsChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ COORDINATION SECTION ████ -->
+    <section id="coordination-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-5xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">Coordination Panel</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">Task board for authorities, volunteers, and community members</p>
+        </div>
+
+        <!-- Role cards -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+          <div class="rounded-xl bg-ink-800 border border-brand-700/50 p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-brand-700/30 flex items-center justify-center">
+                <i data-lucide="landmark" class="w-5 h-5 text-brand-400"></i>
+              </div>
+              <div>
+                <div class="font-syne font-700 text-sm">Authorities</div>
+                <div class="font-mono text-xs text-ink-300">District admin</div>
+              </div>
+            </div>
+            <div class="space-y-2 font-mono text-xs">
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0"></span>
+                <span class="text-ink-100">Activate flood protocol</span>
+                <span class="ml-auto text-danger text-[10px]">URGENT</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-warn shrink-0"></span>
+                <span class="text-ink-100">Brief shelters capacity</span>
+                <span class="ml-auto text-warn text-[10px]">HIGH</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+                <span class="text-ink-100">Review NDVI reports</span>
+                <span class="ml-auto text-brand-400 text-[10px]">NORMAL</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5">
+                <span class="w-2 h-2 rounded-full bg-ink-400 shrink-0"></span>
+                <span class="text-ink-300 line-through">SMS batch sent</span>
+                <span class="ml-auto text-brand-400 text-[10px]">✓ DONE</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-ink-800 border border-blue-700/50 p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-700/30 flex items-center justify-center">
+                <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
+              </div>
+              <div>
+                <div class="font-syne font-700 text-sm">Volunteers</div>
+                <div class="font-mono text-xs text-ink-300">12 active / 18 total</div>
+              </div>
+            </div>
+            <div class="space-y-2 font-mono text-xs">
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0"></span>
+                <span class="text-ink-100">Door-to-door alerts: Ward 3</span>
+                <span class="ml-auto text-danger text-[10px]">IN PROGRESS</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-warn shrink-0"></span>
+                <span class="text-ink-100">Set up riverbank markers</span>
+                <span class="ml-auto text-warn text-[10px]">PENDING</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+                <span class="text-ink-100">Distribute leaflets</span>
+                <span class="ml-auto text-brand-400 text-[10px]">NORMAL</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5">
+                <span class="w-2 h-2 rounded-full bg-ink-400 shrink-0"></span>
+                <span class="text-ink-300 line-through">Check-in with elderly</span>
+                <span class="ml-auto text-brand-400 text-[10px]">✓ DONE</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-ink-800 border border-purple-700/50 p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-9 h-9 rounded-lg bg-purple-700/30 flex items-center justify-center">
+                <i data-lucide="home" class="w-5 h-5 text-purple-400"></i>
+              </div>
+              <div>
+                <div class="font-syne font-700 text-sm">Community</div>
+                <div class="font-mono text-xs text-ink-300">~12,400 residents</div>
+              </div>
+            </div>
+            <div class="space-y-2 font-mono text-xs">
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0"></span>
+                <span class="text-ink-100">Move to shelter: Zone A</span>
+                <span class="ml-auto text-danger text-[10px]">ACTIVE</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-warn shrink-0"></span>
+                <span class="text-ink-100">Stay alert: Zone B–C</span>
+                <span class="ml-auto text-warn text-[10px]">WATCH</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5 border-b border-ink-600">
+                <span class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+                <span class="text-ink-100">Report water level changes</span>
+                <span class="ml-auto text-brand-400 text-[10px]">ONGOING</span>
+              </div>
+              <div class="flex items-center gap-2 py-1.5">
+                <span class="w-2 h-2 rounded-full bg-ink-400 shrink-0"></span>
+                <span class="text-ink-300 line-through">SMS registration</span>
+                <span class="ml-auto text-brand-400 text-[10px]">✓ 8,240</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Volunteer roster -->
+        <div class="rounded-xl border border-ink-600 bg-ink-800 p-4">
+          <div class="font-syne font-700 text-sm mb-3">Volunteer Roster — Natore District</div>
+          <div class="overflow-x-auto">
+            <table class="w-full font-mono text-xs">
+              <thead>
+                <tr class="border-b border-ink-600">
+                  <th class="text-left text-ink-300 py-2 pr-4">Name</th>
+                  <th class="text-left text-ink-300 py-2 pr-4">Upazila</th>
+                  <th class="text-left text-ink-300 py-2 pr-4">Phone</th>
+                  <th class="text-left text-ink-300 py-2 pr-4">Status</th>
+                  <th class="text-left text-ink-300 py-2">Assignment</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink-700">
+                <tr><td class="py-2 pr-4 text-ink-100">Rahman A.</td><td class="pr-4 text-ink-200">Natore Sadar</td><td class="pr-4 text-ink-300">0171-XXXXXX</td><td class="pr-4"><span class="text-safe">● Active</span></td><td class="text-ink-200">Door-to-door alerts</td></tr>
+                <tr><td class="py-2 pr-4 text-ink-100">Khatun S.</td><td class="pr-4 text-ink-200">Baraigram</td><td class="pr-4 text-ink-300">0181-XXXXXX</td><td class="pr-4"><span class="text-safe">● Active</span></td><td class="text-ink-200">Shelter coordination</td></tr>
+                <tr><td class="py-2 pr-4 text-ink-100">Hossain M.</td><td class="pr-4 text-ink-200">Gurudaspur</td><td class="pr-4 text-ink-300">0191-XXXXXX</td><td class="pr-4"><span class="text-warn">● Standby</span></td><td class="text-ink-200">River monitoring</td></tr>
+                <tr><td class="py-2 pr-4 text-ink-100">Begum R.</td><td class="pr-4 text-ink-200">Lalpur</td><td class="pr-4 text-ink-300">0171-XXXXXX</td><td class="pr-4"><span class="text-safe">● Active</span></td><td class="text-ink-200">SMS relay network</td></tr>
+                <tr><td class="py-2 pr-4 text-ink-100">Islam F.</td><td class="pr-4 text-ink-200">Singra</td><td class="pr-4 text-ink-300">0181-XXXXXX</td><td class="pr-4"><span class="text-ink-400">● Offline</span></td><td class="text-ink-300">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ LAST-MILE SECTION ████ -->
+    <section id="lastmile-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-5xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">Last-Mile Communication</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">How alerts reach people WITHOUT internet — the critical last mile</p>
+        </div>
+
+        <!-- Flow diagram -->
+        <div class="rounded-xl bg-ink-800 border border-ink-600 p-6 mb-6">
+          <div class="font-syne font-700 text-sm mb-5 text-center">Alert Propagation Chain</div>
+          <div class="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-brand-700/30 border border-brand-600 flex items-center justify-center text-2xl">🛰️</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">Satellite / Sensors</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-brand-600 to-blue-500 min-w-[20px]"></div>
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-blue-700/30 border border-blue-600 flex items-center justify-center text-2xl">🖥️</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">LMEWS Server</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-blue-500 to-warn min-w-[20px]"></div>
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-warn/20 border border-warn/50 flex items-center justify-center text-2xl">📱</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">SMS to Phones</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-warn to-danger min-w-[20px]"></div>
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-danger/20 border border-danger/50 flex items-center justify-center text-2xl">🔊</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">Voice + Siren</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-danger to-purple-500 min-w-[20px]"></div>
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-purple-700/30 border border-purple-600 flex items-center justify-center text-2xl">🧑‍🤝‍🧑</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">Volunteer Network</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gradient-to-r from-purple-500 to-green-500 min-w-[20px]"></div>
+            <div class="flex flex-col items-center gap-2 shrink-0 w-24">
+              <div class="w-14 h-14 rounded-xl bg-green-700/30 border border-green-600 flex items-center justify-center text-2xl">🏘️</div>
+              <div class="font-mono text-[10px] text-center text-ink-200">Community</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel cards -->
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">📱</div>
+            <div class="font-syne font-700 text-sm mb-1">SMS Alerts</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">Bulk SMS via Twilio to 8,240+ registered numbers. Works on basic feature phones. No internet needed.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-safe/20 text-safe px-2 py-0.5 rounded">✓ ACTIVE</span>
+              <span class="text-ink-300">~2 sec delivery</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">🔊</div>
+            <div class="font-syne font-700 text-sm mb-1">Voice Broadcast</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">Pre-recorded Bangla voice messages auto-dialed to community leaders. Covers non-literate users.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-warn/20 text-warn px-2 py-0.5 rounded">◉ PLANNED</span>
+              <span class="text-ink-300">IVR system</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">🧑‍🤝‍🧑</div>
+            <div class="font-syne font-700 text-sm mb-1">Volunteer Relay</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">18 trained volunteers per upazila do door-to-door alerts with printed color-coded cards in Bangla.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-safe/20 text-safe px-2 py-0.5 rounded">✓ ACTIVE</span>
+              <span class="text-ink-300">12 deployed</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">🪘</div>
+            <div class="font-syne font-700 text-sm mb-1">Drum / Siren</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">Traditional alarm system for power-out scenarios. 3 drum beats = evacuation. Works in total blackout.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-safe/20 text-safe px-2 py-0.5 rounded">✓ ACTIVE</span>
+              <span class="text-ink-300">Community protocol</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">📻</div>
+            <div class="font-syne font-700 text-sm mb-1">Community Radio</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">Partner with local FM stations to broadcast alerts in Bangla. Reaches 95% coverage area.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-warn/20 text-warn px-2 py-0.5 rounded">◉ PLANNED</span>
+              <span class="text-ink-300">MoU in progress</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-4">
+            <div class="text-2xl mb-2">🗺️</div>
+            <div class="font-syne font-700 text-sm mb-1">Offline Kiosks</div>
+            <div class="font-mono text-xs text-ink-300 leading-relaxed">Solar-powered display kiosks at UP offices showing current alert level. Color-coded for low literacy.</div>
+            <div class="mt-3 flex items-center gap-2 font-mono text-xs">
+              <span class="bg-warn/20 text-warn px-2 py-0.5 rounded">◉ PLANNED</span>
+              <span class="text-ink-300">Prototype built</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ████ OFFLINE MODE SECTION ████ -->
+    <section id="offline-section" class="section p-6 overflow-y-auto">
+      <div class="max-w-4xl mx-auto">
+        <div class="mb-6">
+          <h2 class="font-syne font-800 text-2xl text-ink-50">Offline Mode Concept</h2>
+          <p class="font-mono text-xs text-ink-200 mt-1">How LMEWS behaves when internet connectivity is lost</p>
+        </div>
+
+        <!-- Offline status banner -->
+        <div class="rounded-xl bg-danger/10 border border-danger/40 p-4 mb-6 flex items-center gap-4">
+          <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center shrink-0">
+            <i data-lucide="wifi-off" class="w-5 h-5 text-danger"></i>
+          </div>
+          <div>
+            <div class="font-syne font-700 text-sm text-danger">Internet Disconnected — Offline Mode Active</div>
+            <div class="font-mono text-xs text-ink-300 mt-0.5">System running on cached data · Last sync: 6 minutes ago · SMS relay still functional</div>
+          </div>
+          <div class="ml-auto font-mono text-xs text-ink-300 hidden md:block">Cache age: 00:06:12</div>
+        </div>
+
+        <!-- Offline capabilities -->
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-5">
+            <div class="font-syne font-700 text-sm mb-3 text-brand-400">✓ What Works Offline</div>
+            <div class="space-y-2 font-mono text-xs text-ink-100">
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Cached map tiles (last 72 hrs)</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Pre-loaded alert thresholds</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> SMS sending via GSM (no internet)</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Local sensor data (river gauge, rain)</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Volunteer contact database</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Offline alert decision rules</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Voice broadcast system</div>
+              <div class="flex items-center gap-2"><span class="text-brand-400">✓</span> Community kiosk displays</div>
+            </div>
+          </div>
+          <div class="rounded-xl bg-ink-800 border border-ink-600 p-5">
+            <div class="font-syne font-700 text-sm mb-3 text-danger">✗ What Requires Internet</div>
+            <div class="space-y-2 font-mono text-xs text-ink-300">
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> Live satellite imagery (GEE)</div>
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> National weather API sync</div>
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> Real-time NDVI/NDWI updates</div>
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> Dashboard web interface</div>
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> Cloud data backup</div>
+              <div class="flex items-center gap-2"><span class="text-danger">✗</span> Remote volunteer app sync</div>
+            </div>
+            <div class="mt-4 font-mono text-xs text-ink-300 bg-ink-900 rounded-lg p-3">
+              <span class="text-warn">NOTE:</span> SMS alerts remain functional on 2G/3G GSM even when internet is down. This is the key design advantage.
+            </div>
+          </div>
+        </div>
+
+        <!-- Offline protocol -->
+        <div class="rounded-xl bg-ink-800 border border-ink-600 p-5">
+          <div class="font-syne font-700 text-sm mb-4">Offline Alert Protocol (Decision Tree)</div>
+          <div class="space-y-3 font-mono text-xs">
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-white text-[10px] font-700">1</span>
+              <div>
+                <div class="text-ink-100">Local river gauge sensor detects water level {'>'} 8.5m threshold</div>
+                <div class="text-ink-300 mt-0.5">→ Trigger cached flood alert rule (no internet needed)</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-white text-[10px] font-700">2</span>
+              <div>
+                <div class="text-ink-100">LMEWS edge device auto-generates alert from cached rules</div>
+                <div class="text-ink-300 mt-0.5">→ Alert classified: HIGH FLOOD RISK for Natore Sadar</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-white text-[10px] font-700">3</span>
+              <div>
+                <div class="text-ink-100">SMS batch dispatched via local GSM modem (no internet)</div>
+                <div class="text-ink-300 mt-0.5">→ 8,240 numbers receive: "সতর্কতা: বন্যার সম্ভাবনা..."</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-white text-[10px] font-700">4</span>
+              <div>
+                <div class="text-ink-100">Volunteers receive SMS and activate door-to-door protocol</div>
+                <div class="text-ink-300 mt-0.5">→ Color-coded printed cards distributed to households</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="w-6 h-6 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-white text-[10px] font-700">5</span>
+              <div>
+                <div class="text-ink-100">When internet restored: sync all events to cloud dashboard</div>
+                <div class="text-ink-300 mt-0.5">→ Full audit trail maintained for post-event analysis</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════ COMMUNITY MODE OVERLAY ══ -->
+<div id="community-overlay" class="hidden fixed inset-0 z-[900] bg-ink-900 overflow-y-auto">
+  <div class="p-4 flex items-center justify-between border-b border-ink-600 mb-4">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-white"></i>
+      </div>
+      <span class="font-syne font-800 text-lg">Community Mode</span>
+    </div>
+    <button onclick="toggleCommunityMode()" class="p-2 rounded-lg border border-ink-500 text-ink-200">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <!-- Big alert status -->
+  <div class="px-4 mb-6">
+    <div class="rounded-2xl bg-danger p-6 text-center alert-blink">
+      <div class="text-7xl mb-3">🌊</div>
+      <div class="font-syne font-800 text-3xl text-white mb-2">বন্যার বিপদ!</div>
+      <div class="font-bengali text-xl text-red-100">নিরাপদ স্থানে যান এখনই</div>
+    </div>
+  </div>
+
+  <!-- Action icons -->
+  <div class="px-4 grid grid-cols-2 gap-4 mb-6">
+    <div class="community-card rounded-2xl bg-ink-800 border-2 border-brand-600 p-5 text-center cursor-pointer">
+      <div class="text-5xl mb-3">🏠</div>
+      <div class="font-syne font-800 text-lg">আশ্রয় কেন্দ্র</div>
+      <div class="font-bengali text-sm text-ink-300 mt-1">নিকটস্থ আশ্রয়</div>
+    </div>
+    <div class="community-card rounded-2xl bg-ink-800 border-2 border-blue-600 p-5 text-center cursor-pointer">
+      <div class="text-5xl mb-3">📞</div>
+      <div class="font-syne font-800 text-lg">সাহায্য করুন</div>
+      <div class="font-bengali text-sm text-ink-300 mt-1">01700-123456</div>
+    </div>
+    <div class="community-card rounded-2xl bg-ink-800 border-2 border-warn/80 p-5 text-center cursor-pointer">
+      <div class="text-5xl mb-3">💧</div>
+      <div class="font-syne font-800 text-lg">পানির ব্যবস্থা</div>
+      <div class="font-bengali text-sm text-ink-300 mt-1">পানীয় জল</div>
+    </div>
+    <div class="community-card rounded-2xl bg-ink-800 border-2 border-purple-600 p-5 text-center cursor-pointer">
+      <div class="text-5xl mb-3">🩺</div>
+      <div class="font-syne font-800 text-lg">চিকিৎসা</div>
+      <div class="font-bengali text-sm text-ink-300 mt-1">মেডিকেল সহায়তা</div>
+    </div>
+  </div>
+
+  <!-- Weather mini -->
+  <div class="px-4 grid grid-cols-3 gap-3">
+    <div class="rounded-xl bg-ink-800 p-4 text-center">
+      <div class="text-3xl mb-1">🌡️</div>
+      <div class="font-syne font-800 text-xl">32°C</div>
+      <div class="font-mono text-xs text-ink-300">তাপমাত্রা</div>
+    </div>
+    <div class="rounded-xl bg-ink-800 p-4 text-center">
+      <div class="text-3xl mb-1">🌧️</div>
+      <div class="font-syne font-800 text-xl">85%</div>
+      <div class="font-mono text-xs text-ink-300">বৃষ্টির সম্ভাবনা</div>
+    </div>
+    <div class="rounded-xl bg-ink-800 p-4 text-center">
+      <div class="text-3xl mb-1">💨</div>
+      <div class="font-syne font-800 text-xl">24 km/h</div>
+      <div class="font-mono text-xs text-ink-300">বাতাস</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ TOAST AREA ══ -->
+<div id="toast-area" class="fixed bottom-4 right-4 z-[800] space-y-2 pointer-events-none"></div>
+
+<!-- ═══════════════════════════════════════════════════════ JS ══════ -->
+<script>
+// ── Clock ──────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'Asia/Dhaka' }) + ' BDT';
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── Dark/Light Theme ───────────────────────────────────────────────
+let isDark = true;
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.classList.toggle('dark', isDark);
+  document.getElementById('themeLabel').textContent = isDark ? 'Dark' : 'Light';
+  // update glass panels
+  const panels = document.querySelectorAll('.glass');
+  panels.forEach(p => {
+    p.classList.toggle('glass-dark', isDark);
+    p.classList.toggle('glass-light', !isDark);
+  });
+}
+
+// ── Navigation ──────────────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('[data-nav]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-nav="${id}"]`).classList.add('active');
+  // layer panel only on map
+  document.getElementById('layer-panel').style.opacity = id === 'map-section' ? '1' : '0.4';
+  // init charts when analytics shown
+  if (id === 'analytics-section') initCharts();
+  lucide.createIcons();
+}
+
+// ── Community Mode ──────────────────────────────────────────────────
+let communityMode = false;
+function toggleCommunityMode() {
+  communityMode = !communityMode;
+  document.getElementById('community-overlay').classList.toggle('hidden', !communityMode);
+  lucide.createIcons();
+}
+
+// ── Map Setup ────────────────────────────────────────────────────────
+const NATORE = [24.4103, 88.9985];
+const map = L.map('map', { zoomControl: true, center: NATORE, zoom: 11, preferCanvas: true });
+
+// Dark tile layer
+const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '©OpenStreetMap ©Carto', maxZoom: 19
+}).addTo(map);
+
+// Upazila markers
+const upazilas = [
+  { name: 'Natore Sadar', lat: 24.4103, lng: 88.9985, risk: 'HIGH', emoji: '🌊' },
+  { name: 'Baraigram',    lat: 24.5108, lng: 89.0480, risk: 'HIGH', emoji: '🌊' },
+  { name: 'Gurudaspur',   lat: 24.3578, lng: 89.0344, risk: 'MEDIUM', emoji: '🌧️' },
+  { name: 'Lalpur',       lat: 24.2874, lng: 88.9430, risk: 'HIGH', emoji: '⚡' },
+  { name: 'Singra',       lat: 24.5501, lng: 88.9102, risk: 'MEDIUM', emoji: '☀️' },
+  { name: 'Atrai',        lat: 24.6480, lng: 89.0347, risk: 'LOW', emoji: '✅' },
+  { name: 'Naldanga',     lat: 24.3990, lng: 89.0789, risk: 'LOW', emoji: '✅' },
+];
+
+const riskColor = { HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#22c55e' };
+
+upazilas.forEach(u => {
+  const c = riskColor[u.risk];
+  const marker = L.circleMarker([u.lat, u.lng], {
+    radius: 16, fillColor: c, color: c,
+    weight: 2, opacity: 0.8, fillOpacity: 0.25
+  }).addTo(map);
+
+  const icon = L.divIcon({
+    html: `<div style="font-size:22px;text-align:center;line-height:1;">${u.emoji}<div style="font-size:9px;color:${c};font-family:monospace;font-weight:700;margin-top:2px;">${u.risk}</div></div>`,
+    iconSize: [40, 36], iconAnchor: [20, 18], className: ''
+  });
+  L.marker([u.lat, u.lng], { icon }).addTo(map)
+    .bindPopup(`<b>${u.name}</b><br/>Risk: <span style="color:${c}">${u.risk}</span><br/>Upazila, Natore`);
+});
+
+// Flood zone polygon (demo)
+const floodZone = L.polygon([
+  [24.45, 88.95], [24.55, 89.02], [24.52, 89.10], [24.42, 89.08], [24.38, 89.00]
+], { color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.15, weight: 2, dashArray: '6,4' })
+.bindPopup('<b>Flood Risk Zone</b><br/>High inundation probability');
+
+// Simulated overlay layers (color-coded rectangles for demo)
+const bounds = [[24.2, 88.75], [24.75, 89.20]];
+const layers = {
+  ndvi:  L.rectangle(bounds, { color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.18, weight: 0 }),
+  ndwi:  L.rectangle(bounds, { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.18, weight: 0 }),
+  lulc:  L.rectangle(bounds, { color: '#eab308', fillColor: '#eab308', fillOpacity: 0.18, weight: 0 }),
+  soil:  L.rectangle(bounds, { color: '#f97316', fillColor: '#f97316', fillOpacity: 0.18, weight: 0 }),
+};
+layers.ndvi.addTo(map); // default active
+
+const layerDescs = {
+  ndvi: { name: 'NDVI — Vegetation Index', desc: 'Normalized Difference Vegetation Index measures live green vegetation. Higher values (shown in green) indicate dense, healthy vegetation cover. Current mean: 0.62 — slight drought stress.', color: 'from-red-600 via-yellow-400 to-green-500' },
+  ndwi: { name: 'NDWI — Water Index',      desc: 'Normalized Difference Water Index detects surface water and soil moisture. Blue shading shows inundated or water-stressed areas. Critical for flood monitoring.', color: 'from-yellow-200 via-cyan-400 to-blue-700' },
+  lulc: { name: 'LULC — Land Use/Cover',   desc: 'Land Use/Land Cover classification shows agricultural land, settlements, wetlands, and rivers across Natore. Used for risk zone delineation.', color: 'from-green-700 via-yellow-400 to-red-400' },
+  soil: { name: 'Soil Moisture',            desc: 'Surface soil moisture retrieved from microwave satellite data. Orange areas indicate low moisture (drought risk). Current: 18% — below safe threshold.', color: 'from-blue-600 via-green-400 to-orange-600' },
+};
+
+function toggleLayer(name, on) {
+  const lbl = document.querySelector(`#layer-${name}`).closest('label').querySelector('.toggle-track');
+  lbl.style.background = on ? '#16a34a' : '';
+  const thumb = lbl.querySelector('.toggle-thumb');
+  thumb.style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+
+  if (on) {
+    layers[name].addTo(map);
+    document.getElementById('active-layer-name').textContent = layerDescs[name].name.split('—')[0].trim();
+    document.getElementById('li-title').textContent = layerDescs[name].name;
+    document.getElementById('li-desc').textContent = layerDescs[name].desc;
+    document.getElementById('layer-desc').textContent = layerDescs[name].desc;
+    document.getElementById('layer-info').querySelector('div:last-child div').className = `flex-1 h-2 rounded bg-gradient-to-r ${layerDescs[name].color}`;
+  } else {
+    map.removeLayer(layers[name]);
+  }
+}
+
+// ── Alert Simulation ─────────────────────────────────────────────────
+const alertData = {
+  flood: {
+    icon: '🌊', title: 'Flood Alert', bangla: 'বন্যার সতর্কতা!',
+    sub: 'High risk in Natore Sadar & Baraigram',
+    sms: 'সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS'
+  },
+  lightning: {
+    icon: '⚡', title: 'Lightning Alert', bangla: 'বজ্রপাতের সতর্কতা!',
+    sub: 'Thunderstorm cells detected — stay indoors',
+    sms: 'সতর্কতা: বজ্রপাতের ঝুঁকি! খোলা মাঠে যাবেন না। ঘরের ভেতরে থাকুন। —LMEWS'
+  }
+};
+
+function simulateAlert(type) {
+  const a = alertData[type];
+  // Show overlay on map
+  showSection('map-section');
+  document.getElementById('alert-icon-big').textContent = a.icon;
+  document.getElementById('alert-title-big').textContent = a.title;
+  document.getElementById('alert-bangla-big').textContent = a.bangla;
+  document.getElementById('alert-sub-big').textContent = a.sub;
+  const overlay = document.getElementById('alert-overlay');
+  overlay.classList.remove('hidden');
+  // Add flood zone
+  if (type === 'flood') floodZone.addTo(map);
+  // Simulate SMS
+  addSMSLog(type, a.sms);
+  // Toast
+  showToast(a.title, a.bangla, type === 'flood' ? 'danger' : 'warn');
+  // Auto-dismiss after 8s
+  setTimeout(() => { overlay.classList.add('hidden'); if (type === 'flood') map.removeLayer(floodZone); }, 8000);
+}
+
+function dismissAlert() {
+  document.getElementById('alert-overlay').classList.add('hidden');
+  map.removeLayer(floodZone);
+}
+
+// ── SMS Functions ──────────────────────────────────────────────────
+const smsMsgs = {
+  flood:     'সতর্কতা: নাটোরে বন্যার সম্ভাবনা। দ্রুত নিরাপদ স্থানে যান। —LMEWS',
+  drought:   'সতর্কতা: খরার লক্ষণ দেখা যাচ্ছে। পানি সংরক্ষণ করুন। —LMEWS',
+  rain:      'সতর্কতা: ভারী বৃষ্টির সম্ভাবনা। ঘরে থাকুন ও সাবধান থাকুন। —LMEWS',
+  lightning: 'সতর্কতা: বজ্রপাতের ঝুঁকি! খোলা মাঠে যাবেন না। ঘরের ভেতরে থাকুন। —LMEWS',
+  earthquake:'সতর্কতা: ভূমিকম্পের আশঙ্কা। খোলা জায়গায় আশ্রয় নিন। —LMEWS',
+};
+
+function updateSmsPreview() {
+  const type = document.getElementById('sms-type').value;
+  document.getElementById('sms-preview').textContent = smsMsgs[type];
+}
+
+let smsTotal = 1247, smsDelivered = 1198, smsFailed = 49;
+
+function sendSMS(test = false) {
+  const type = document.getElementById('sms-type').value;
+  const area = document.getElementById('sms-area').value;
+  const msg  = smsMsgs[type];
+  const count = test ? 1 : Math.floor(Math.random() * 80) + 30;
+  const fail  = test ? 0 : Math.floor(count * 0.04);
+  const ok    = count - fail;
+
+  smsTotal += count; smsDelivered += ok; smsFailed += fail;
+  document.getElementById('sms-total').textContent = smsTotal.toLocaleString();
+  document.getElementById('sms-delivered').textContent = smsDelivered.toLocaleString();
+  document.getElementById('sms-failed').textContent = smsFailed.toLocaleString();
+  document.getElementById('sms-coverage').textContent = ((smsDelivered/smsTotal)*100).toFixed(1) + '%';
+
+  addSMSLog(type, msg, count, ok, fail, area, test);
+  showToast('SMS Dispatched', `${ok} messages sent to ${area}`, 'safe');
+}
+
+function addSMSLog(type, msg, count = 1, ok = 1, fail = 0, area = 'Natore Sadar', test = false) {
+  const log = document.getElementById('sms-log');
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'Asia/Dhaka' });
+  const phones = ['01711-XXXXXX','01812-XXXXXX','01913-XXXXXX','01614-XXXXXX','01515-XXXXXX'];
+  const p = phones[Math.floor(Math.random() * phones.length)];
+
+  const entry = document.createElement('div');
+  entry.className = 'sms-entry flex items-start gap-3 py-2 border-b border-ink-700';
+  entry.innerHTML = `
+    <span class="text-brand-400 shrink-0 font-mono text-xs">✓ SENT</span>
+    <span class="text-ink-300 shrink-0 font-mono text-xs">${now}</span>
+    <span class="text-ink-100 font-mono text-xs flex-1">${p} — ${msg}</span>
+  `;
+  log.prepend(entry);
+
+  if (fail > 0) {
+    const failEntry = document.createElement('div');
+    failEntry.className = 'sms-entry flex items-start gap-3 py-2 border-b border-ink-700';
+    failEntry.innerHTML = `<span class="text-danger shrink-0 font-mono text-xs">✗ FAIL</span><span class="text-ink-300 shrink-0 font-mono text-xs">${now}</span><span class="text-ink-300 font-mono text-xs">${fail} numbers unreachable</span>`;
+    log.prepend(failEntry);
+  }
+}
+
+function clearSMSLog() {
+  document.getElementById('sms-log').innerHTML = '<div class="font-mono text-xs text-ink-400 py-2 text-center">Log cleared</div>';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+function showToast(title, body, type = 'safe') {
+  const colors = { safe: 'border-safe bg-safe/10', danger: 'border-danger bg-danger/10', warn: 'border-warn bg-warn/10' };
+  const icons  = { safe: '✓', danger: '🚨', warn: '⚠️' };
+  const toast = document.createElement('div');
+  toast.className = `pointer-events-auto rounded-xl border ${colors[type]} p-3 w-64 animate-fade-up font-mono text-xs`;
+  toast.innerHTML = `<div class="font-syne font-700 text-sm text-ink-50">${icons[type]} ${title}</div><div class="text-ink-200 mt-0.5">${body}</div>`;
+  document.getElementById('toast-area').appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+// ── Charts ─────────────────────────────────────────────────────────
+let chartsInited = false;
+function initCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const grid = { color: 'rgba(77,102,90,0.2)' };
+  const defaults = { color: '#b0ccc0', font: { family: 'IBM Plex Mono', size: 10 } };
+  Chart.defaults.color = defaults.color;
+  Chart.defaults.font  = defaults.font;
+
+  // Rainfall
+  new Chart(document.getElementById('rainfallChart'), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{ label: 'Rainfall (mm)', data: [12,25,58,95,182,248,310,285,195,88,35,18], backgroundColor: 'rgba(59,130,246,0.6)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid }, y: { grid } } }
+  });
+
+  // NDVI
+  new Chart(document.getElementById('ndviChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{ label: 'NDVI', data: [0.38,0.42,0.55,0.68,0.72,0.70,0.65,0.62,0.60,0.58,0.50,0.40], borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.4, pointRadius: 3, fill: true }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid }, y: { grid, min: 0, max: 1 } } }
+  });
+
+  // Risk distribution
+  new Chart(document.getElementById('riskChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['HIGH Risk', 'MEDIUM Risk', 'LOW Risk'],
+      datasets: [{ data: [28, 45, 27], backgroundColor: ['#ef4444','#f59e0b','#22c55e'], borderColor: '#111715', borderWidth: 3 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // SMS performance
+  new Chart(document.getElementById('smsChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Sent', data: [80,120,200,350,420,550,480,520,400,320,180,100], borderColor: '#22c55e', tension: 0.4, pointRadius: 2 },
+        { label: 'Delivered', data: [76,115,192,336,404,528,461,499,384,307,173,96], borderColor: '#3b82f6', tension: 0.4, pointRadius: 2 },
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { x: { grid }, y: { grid } } }
+  });
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+lucide.createIcons();
+updateSmsPreview();
+
+// Simulate live data pulse
+setInterval(() => {
+  const el = document.getElementById('sms-total');
+  if (el && Math.random() < 0.3) {
+    smsTotal++;
+    smsDelivered++;
+    el.textContent = smsTotal.toLocaleString();
+    document.getElementById('sms-delivered').textContent = smsDelivered.toLocaleString();
+  }
+}, 5000);
+</script>
+</body>
+</html>
