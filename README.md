@@ -1,11 +1,11 @@
-# 🚨 Last-Mile Early Warning System (LMEWS)
+## Last-Mile Early Warning System (LMEWS)
 ### Case Study: Natore District, Bangladesh
 
 > *Bridging the gap between national disaster forecasts and last-mile vulnerable communities — even without internet.*
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 LMEWS is an intelligent, production-quality early warning platform designed to deliver life-saving hazard alerts to the most vulnerable communities in rural Bangladesh. The system addresses the critical "last mile" problem: national disaster forecasting agencies generate accurate predictions, but this information rarely reaches the farmers, fishermen, and families who need it most — quickly enough, in their language, through channels they can access.
 
@@ -13,23 +13,23 @@ LMEWS is an intelligent, production-quality early warning platform designed to d
 
 ---
 
-## ✨ Features
+## Features
 
-### 🌍 Interactive Map Dashboard
+### Interactive Map Dashboard
 - Leaflet.js map centered on Natore District (24.41°N, 88.99°E)
 - Risk markers for all 7 upazilas with color-coded risk levels
 - Toggleable satellite-derived layers: **NDVI**, **NDWI**, **LULC**, **Soil Moisture**
 - Dynamic flood zone polygon rendering on alert simulation
 - Layer info panel with scientific explanations
 
-### 🚨 Early Warning System
+### Early Warning System
 - **5 hazard types:** Flood · Drought · Heavy Rainfall · Lightning · Earthquake
 - Color-coded risk cards: 🟢 LOW · 🟡 MEDIUM · 🔴 HIGH
 - Bangla (Bengali) messages for all alerts
 - Action recommendations for each hazard
 - Visual alert overlay with animation on simulation
 
-### 📡 SMS Alert System (Key Feature)
+### SMS Alert System (Key Feature)
 - Full `send_sms()` and `send_bulk_sms()` backend functions
 - **Twilio integration** — real SMS when API keys are set
 - **Simulation mode** — works perfectly without any API keys
@@ -38,46 +38,46 @@ LMEWS is an intelligent, production-quality early warning platform designed to d
 - Bulk dispatch to 8,240+ registered numbers
 - Delivery statistics: total sent, delivered, failed, reach rate
 
-### 📢 Last-Mile Communication Panel
+### Last-Mile Communication Panel
 - Alert propagation chain: Satellite → Server → SMS → Voice → Volunteers → Community
 - 6 communication channels: SMS, Voice Broadcast, Volunteer Relay, Drum/Siren, Community Radio, Offline Kiosks
 - Each channel shows deployment status and coverage
 
-### 📊 Analytics Dashboard (Chart.js)
+### Analytics Dashboard (Chart.js)
 - Monthly rainfall trend (12-month bar chart)
 - NDVI vegetation health trend (line chart)
 - Risk level distribution (doughnut chart)
 - SMS delivery performance over time (multi-line chart)
 - KPI cards: rainfall, NDVI mean, flood events, SMS alerts
 
-### 👥 Coordination Panel
+### Coordination Panel
 - 3-role task board: Authorities · Volunteers · Community members
 - Volunteer roster with upazila, phone, status, and assignment
 - Real-time task prioritization
 
-### 📴 Offline Mode Concept
+### Offline Mode Concept
 - Detailed breakdown of what works vs. what requires internet
 - 5-step offline alert protocol using local sensors + GSM SMS
 - Edge-device architecture for total internet-independence
 
-### 🌗 Dark / Light Mode
+### Dark / Light Mode
 - Full theme toggle with smooth transition
 - Glass-morphism UI panels adapt to both modes
 
-### 📱 Community Mode
+### Community Mode
 - Full-screen simplified UI for low-literacy users
 - Large icons, minimal text, Bangla labels
 - Giant color-coded alert status card
 - Quick-access buttons: Shelter · Help · Water · Medical
 
-### ⚡ Alert Simulation
+### Alert Simulation
 - "Flood Alert" button: triggers animated overlay on map + SMS log entry + toast
 - "Lightning Alert" button: same flow with yellow styling
 - Auto-dismiss after 8 seconds
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer     | Technology |
 |-----------|------------|
@@ -91,25 +91,7 @@ LMEWS is an intelligent, production-quality early warning platform designed to d
 
 ---
 
-## 📁 Project Structure
-
-```
-last-mile-ews/
-├── frontend/
-│   └── index.html          ← Complete single-file frontend app
-├── backend/
-│   ├── app.py              ← Flask application entry point
-│   ├── routes.py           ← All API endpoints
-│   ├── sms.py              ← SMS module (Twilio + simulation)
-│   └── requirements.txt    ← Python dependencies
-├── data/
-│   └── sample_data.json    ← Sample district data
-└── README.md
-```
-
----
-
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### Frontend Only (no backend needed)
 1. Open `frontend/index.html` in any browser — or use VS Code Live Server
@@ -148,7 +130,7 @@ python app.py
 
 ---
 
-## 📲 How SMS Works
+## How SMS Works
 
 ### Simulation Mode (default — no setup needed)
 When no Twilio credentials are set, `send_sms()` automatically falls back to simulation:
@@ -185,7 +167,7 @@ Log entry created → Dashboard updated
 
 ---
 
-## 🌐 API Reference
+## API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -206,7 +188,7 @@ Log entry created → Dashboard updated
 
 ---
 
-## 🔌 How to Connect Real APIs
+## How to Connect Real APIs
 
 ### Google Earth Engine (NDVI, NDWI, LULC, Soil Moisture)
 ```python
@@ -246,7 +228,7 @@ TWILIO_FROM_NUMBER = "+1xxxxxxxxxx"
 
 ---
 
-## 🏆 Why LMEWS Wins at Last-Mile Delivery
+## Why LMEWS Wins at Last-Mile Delivery
 
 | Challenge | LMEWS Solution |
 |-----------|----------------|
@@ -259,7 +241,7 @@ TWILIO_FROM_NUMBER = "+1xxxxxxxxxx"
 
 ---
 
-## 🔮 Future Improvements
+## Future Improvements
 
 1. **AI Prediction Model** — LSTM/GRU model trained on 10-year flood data for Natore
 2. **WhatsApp Integration** — Twilio WhatsApp API for richer alerts with images
@@ -274,7 +256,7 @@ TWILIO_FROM_NUMBER = "+1xxxxxxxxxx"
 
 ---
 
-## 👥 Contact & Credits
+## Contact & Credits
 
 - **System:** LMEWS v1.0 — Mapathon Competition Entry
 - **Focus Area:** Natore District, Rajshahi Division, Bangladesh
