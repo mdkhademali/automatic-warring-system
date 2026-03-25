@@ -1,13 +1,13 @@
 ## Last-Mile Early Warning System (LMEWS)
 ### Case Study: Natore District, Bangladesh
 
-> *Bridging the gap between national disaster forecasts and last-mile vulnerable communities — even without internet.*
+> *Bridging the gap between national disaster forecasts and last-mile vulnerable communities, even without internet.*
 
 ---
 
 ## Project Overview
 
-LMEWS is an intelligent, production-quality early warning platform designed to deliver life-saving hazard alerts to the most vulnerable communities in rural Bangladesh. The system addresses the critical "last mile" problem: national disaster forecasting agencies generate accurate predictions, but this information rarely reaches the farmers, fishermen, and families who need it most — quickly enough, in their language, through channels they can access.
+LMEWS is an intelligent, production-quality early warning platform designed to deliver life-saving hazard alerts to the most vulnerable communities in rural Bangladesh. The system addresses the critical "last mile" problem: national disaster forecasting agencies generate accurate predictions, but this information rarely reaches the farmers, fishermen, and families who need it most, quickly enough, in their language, through channels they can access.
 
 **Case Study District:** Natore, Rajshahi Division — 7 Upazilas, ~1.4 million residents, prone to flooding from the Atrai and Baral rivers, drought, lightning, and seasonal extreme weather.
 
