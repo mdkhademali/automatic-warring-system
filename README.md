@@ -60,7 +60,7 @@ LMEWS is an intelligent, production-quality early warning platform designed to d
 - 5-step offline alert protocol using local sensors + GSM SMS
 - Edge-device architecture for total internet-independence
 
-### Dark / Light Mode
+### Dark/Light Mode
 - Full theme toggle with smooth transition
 - Glass-morphism UI panels adapt to both modes
 
